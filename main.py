@@ -218,12 +218,13 @@ class MetricsCollector:
     def __init__(self):
         self.results = []
     
-    def add_result(self, example_name, algorithm, num_vertices, num_edges, 
+    def add_result(self, example_name, algorithm, hm_pairs, num_vertices, num_edges, 
                    distance, path_length, metrics):
         result = {
             'timestamp': datetime.now().isoformat(),
             'example': example_name,
             'algorithm': algorithm,
+            'hm_pairs': hm_pairs,
             'num_vertices': num_vertices,
             'num_edges': num_edges,
             'distance': distance,
@@ -240,7 +241,7 @@ class MetricsCollector:
             print("Nenhum resultado para salvar.")
             return
         
-        fieldnames = ['timestamp', 'example', 'algorithm', 'num_vertices', 'num_edges',
+        fieldnames = ['timestamp', 'example', 'algorithm', 'hm_pairs', 'num_vertices', 'num_edges',
                      'distance', 'path_length', 'execution_time_ms', 'memory_usage_kb', 
                      'comparisons', 'iterations']
 
@@ -268,7 +269,7 @@ def exemplo_1_basico(collector):
     distances, predecessors, path, metrics_dij = g_dij.dijkstra('A', 'C')
     dist_dij = distances['C']
     
-    collector.add_result('Exemplo_1_Triangular', 'Dijkstra', len(vertices), 
+    collector.add_result('Exemplo_1_Triangular', 'Dijkstra', 'one-pair', len(vertices), 
                         len(conexoes), dist_dij, len(path), metrics_dij)
     
     # Floyd-Warshall
@@ -281,7 +282,7 @@ def exemplo_1_basico(collector):
     dist_fw = dist_matrix[0][2]
     path_fw = g_fw.get_path('A', 'C')
     
-    collector.add_result('Exemplo_1_Triangular', 'Floyd_Warshall', len(vertices), 
+    collector.add_result('Exemplo_1_Triangular', 'Floyd_Warshall', 'one-pair', len(vertices), 
                         len(conexoes), dist_fw, len(path_fw), metrics_fw)
     
     salvar_grafo_como_imagem("Exemplo_1_Triangular", vertices, conexoes, f"{base_path}/graphs")
@@ -289,6 +290,62 @@ def exemplo_1_basico(collector):
 
     print(f"Dijkstra: Distância = {dist_dij}, Caminho = {path}, Tempo = {metrics_dij['execution_time']:.3f}ms")
     print(f"Floyd-Warshall: Distância = {dist_fw}, Caminho = {path_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
+    print()
+
+def exemplo_1_basico_all_pairs(collector):
+    """Exemplo 1: Grafo simples triangular - 3 vértices"""
+    print("=== EXEMPLO 1: Grafo Triangular (3 vértices) ===")
+    
+    vertices = ['A', 'B', 'C']
+    conexoes = [('A', 'B', 10), ('B', 'C', 5), ('A', 'C', 20)]
+
+    # Floyd-Warshall (uma vez só)
+    g_fw = FloydWarshallGraph()
+    g_fw.add_vertices(vertices)
+    for origem, destino, peso in conexoes:
+        g_fw.add_edge(origem, destino, peso)
+
+    dist_matrix, metrics_fw = g_fw.floyd_warshall()
+    total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
+
+    collector.add_result('Exemplo_1_Triangular', 'Floyd_Warshall', 'all-pairs', len(vertices),
+                        len(conexoes), total_fw_distance, 0, metrics_fw)
+
+    # Dijkstra para todos os pares
+    g_dij = DijkstraGraph()
+    for v in vertices:
+        g_dij.add_vertex(v)
+    for origem, destino, peso in conexoes:
+        g_dij.add_edge(origem, destino, peso)
+
+    execution_time_total = 0
+    memory_usage_total = 0
+    comparisons_total = 0
+    iterations_total = 0
+    total_distance = 0
+
+    for i in vertices:
+        distances, _, _, metrics = g_dij.dijkstra(i)
+        total_distance += sum(distances[v] for v in vertices if distances[v] < float('inf'))
+        comparisons_total += metrics['comparisons']
+        execution_time_total += metrics['execution_time']
+        memory_usage_total += metrics['memory_usage']
+        iterations_total += metrics['iterations']
+
+    metrics_dij_all_pairs = {
+        'execution_time': execution_time_total,
+        'memory_usage': memory_usage_total,
+        'comparisons': comparisons_total,
+        'iterations': iterations_total,
+    }
+
+    collector.add_result('Exemplo_1_Triangular', 'Dijkstra', 'all-pairs', len(vertices),
+                        len(conexoes), total_distance, 0, metrics_dij_all_pairs)
+
+    salvar_grafo_como_imagem("Exemplo_1_Triangular", vertices, conexoes, f"{base_path}/graphs")
+
+    print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
+    print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
     print()
 
 def exemplo_2_medio(collector):
@@ -313,7 +370,7 @@ def exemplo_2_medio(collector):
     distances, predecessors, path, metrics_dij = g_dij.dijkstra('Centro', 'Universidade')
     dist_dij = distances['Universidade']
     
-    collector.add_result('Exemplo_2_Urbana', 'Dijkstra', len(vertices), 
+    collector.add_result('Exemplo_2_Urbana', 'Dijkstra', 'one-pair', len(vertices), 
                         len(conexoes), dist_dij, len(path), metrics_dij)
     
     # Floyd-Warshall
@@ -326,7 +383,7 @@ def exemplo_2_medio(collector):
     dist_fw = dist_matrix[0][7]
     path_fw = g_fw.get_path('Centro', 'Universidade')
     
-    collector.add_result('Exemplo_2_Urbana', 'Floyd_Warshall', len(vertices), 
+    collector.add_result('Exemplo_2_Urbana', 'Floyd_Warshall', 'one-pair', len(vertices), 
                         len(conexoes), dist_fw, len(path_fw), metrics_fw)
     
     salvar_grafo_como_imagem("Exemplo_2_Urbana", vertices, conexoes, f"{base_path}/graphs")
@@ -334,6 +391,68 @@ def exemplo_2_medio(collector):
 
     print(f"Dijkstra: Distância = {dist_dij}, Tempo = {metrics_dij['execution_time']:.3f}ms")
     print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
+    print()
+
+def exemplo_2_medio_all_pairs(collector):
+    """Exemplo 2: Rede urbana - 8 vértices"""
+    print("=== EXEMPLO 2: Rede Urbana (8 vértices) ===")
+    
+    vertices = ['Centro', 'Norte', 'Sul', 'Leste', 'Oeste', 'Shopping', 'Aeroporto', 'Universidade']
+    conexoes = [
+        ('Centro', 'Norte', 15), ('Centro', 'Sul', 12), ('Centro', 'Leste', 18),
+        ('Centro', 'Oeste', 10), ('Norte', 'Shopping', 8), ('Sul', 'Aeroporto', 25),
+        ('Leste', 'Universidade', 14), ('Oeste', 'Shopping', 22), ('Shopping', 'Aeroporto', 30),
+        ('Aeroporto', 'Universidade', 16), ('Norte', 'Universidade', 35)
+    ]
+
+    # Floyd-Warshall (uma vez só)
+    g_fw = FloydWarshallGraph()
+    g_fw.add_vertices(vertices)
+    for origem, destino, peso in conexoes:
+        g_fw.add_edge(origem, destino, peso)
+
+    dist_matrix, metrics_fw = g_fw.floyd_warshall()
+    total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
+
+    collector.add_result('Exemplo_2_Urbana', 'Floyd_Warshall', 'all-pairs', len(vertices),
+                        len(conexoes), total_fw_distance, 0, metrics_fw)
+
+    # Dijkstra para todos os pares
+    g_dij = DijkstraGraph()
+    for v in vertices:
+        g_dij.add_vertex(v)
+    for origem, destino, peso in conexoes:
+        g_dij.add_edge(origem, destino, peso)
+
+    execution_time_total = 0
+    memory_usage_total = 0
+    comparisons_total = 0
+    iterations_total = 0
+    total_distance = 0
+
+    for i in vertices:
+        distances, _, _, metrics = g_dij.dijkstra(i)
+        total_distance += sum(distances[v] for v in vertices if distances[v] < float('inf'))
+        comparisons_total += metrics['comparisons']
+        execution_time_total += metrics['execution_time']
+        memory_usage_total += metrics['memory_usage']
+        iterations_total += metrics['iterations']
+
+
+    metrics_dij_all_pairs = {
+        'execution_time': execution_time_total,
+        'memory_usage': memory_usage_total,
+        'comparisons': comparisons_total,
+        'iterations': iterations_total,
+    }
+
+    collector.add_result('Exemplo_2_Urbana', 'Dijkstra', 'all-pairs', len(vertices),
+                        len(conexoes), total_distance, 0, metrics_dij_all_pairs)
+
+    salvar_grafo_como_imagem("Exemplo_2_Urbana", vertices, conexoes, f"{base_path}/graphs")
+
+    print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
+    print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
     print()
 
 def exemplo_3_complexo(collector):
@@ -362,7 +481,7 @@ def exemplo_3_complexo(collector):
     distances, predecessors, path, metrics_dij = g_dij.dijkstra('SP', 'AM')
     dist_dij = distances['AM']
     
-    collector.add_result('Exemplo_3_Logistica', 'Dijkstra', len(vertices), 
+    collector.add_result('Exemplo_3_Logistica', 'Dijkstra', 'one-pair', len(vertices), 
                         len(conexoes), dist_dij, len(path), metrics_dij)
     
     # Floyd-Warshall
@@ -375,7 +494,7 @@ def exemplo_3_complexo(collector):
     dist_fw = dist_matrix[0][13]
     path_fw = g_fw.get_path('SP', 'AM')
     
-    collector.add_result('Exemplo_3_Logistica', 'Floyd_Warshall', len(vertices), 
+    collector.add_result('Exemplo_3_Logistica', 'Floyd_Warshall', 'one-pair', len(vertices), 
                         len(conexoes), dist_fw, len(path_fw), metrics_fw)
     
     salvar_grafo_como_imagem("Exemplo_3_Logistica", vertices, conexoes, f"{base_path}/graphs")
@@ -383,6 +502,72 @@ def exemplo_3_complexo(collector):
 
     print(f"Dijkstra: Distância = {dist_dij}, Tempo = {metrics_dij['execution_time']:.3f}ms")
     print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
+    print()
+
+def exemplo_3_complexo_all_pairs(collector):
+    """Exemplo 3: Rede logística - 15 vértices"""
+    print("=== EXEMPLO 3: Rede Logística (15 vértices) ===")
+    
+    vertices = ['SP', 'RJ', 'BH', 'BSB', 'GO', 'MG', 'ES', 'PR', 'SC', 'RS', 'BA', 'PE', 'CE', 'AM', 'PA']
+    conexoes = [
+        ('SP', 'RJ', 430), ('SP', 'BH', 590), ('SP', 'BSB', 1150), ('SP', 'PR', 410),
+        ('RJ', 'BH', 440), ('RJ', 'ES', 520), ('RJ', 'BA', 1200),
+        ('BH', 'BSB', 740), ('BH', 'GO', 900), ('BH', 'BA', 800),
+        ('BSB', 'GO', 210), ('BSB', 'BA', 1100), ('BSB', 'AM', 1950),
+        ('GO', 'MG', 350), ('MG', 'ES', 300), ('PR', 'SC', 300),
+        ('SC', 'RS', 460), ('BA', 'PE', 800), ('PE', 'CE', 630),
+        ('CE', 'AM', 1700), ('AM', 'PA', 1300), ('PA', 'CE', 1800),
+        ('ES', 'BA', 900), ('RS', 'SP', 1100), ('GO', 'BA', 1000)
+    ]
+
+    # Floyd-Warshall (uma vez só)
+    g_fw = FloydWarshallGraph()
+    g_fw.add_vertices(vertices)
+    for origem, destino, peso in conexoes:
+        g_fw.add_edge(origem, destino, peso)
+
+    dist_matrix, metrics_fw = g_fw.floyd_warshall()
+    total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
+
+    collector.add_result('Exemplo_3_Logistica', 'Floyd_Warshall', 'all-pairs', len(vertices),
+                        len(conexoes), total_fw_distance, 0, metrics_fw)
+
+    # Dijkstra para todos os pares
+    g_dij = DijkstraGraph()
+    for v in vertices:
+        g_dij.add_vertex(v)
+    for origem, destino, peso in conexoes:
+        g_dij.add_edge(origem, destino, peso)
+
+    execution_time_total = 0
+    memory_usage_total = 0
+    comparisons_total = 0
+    iterations_total = 0
+    total_distance = 0
+
+    for i in vertices:
+        distances, _, _, metrics = g_dij.dijkstra(i)
+        total_distance += sum(distances[v] for v in vertices if distances[v] < float('inf'))
+        comparisons_total += metrics['comparisons']
+        execution_time_total += metrics['execution_time']
+        memory_usage_total += metrics['memory_usage']
+        iterations_total += metrics['iterations']
+
+
+    metrics_dij_all_pairs = {
+        'execution_time': execution_time_total,
+        'memory_usage': memory_usage_total,
+        'comparisons': comparisons_total,
+        'iterations': iterations_total,
+    }
+
+    collector.add_result('Exemplo_3_Logistica', 'Dijkstra', 'all-pairs', len(vertices),
+                        len(conexoes), total_distance, 0, metrics_dij_all_pairs)
+
+    salvar_grafo_como_imagem("Exemplo_3_Logistica", vertices, conexoes, f"{base_path}/graphs")
+
+    print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
+    print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
     print()
 
 def exemplo_4_denso(collector):
@@ -412,7 +597,7 @@ def exemplo_4_denso(collector):
     distances, predecessors, path, metrics_dij = g_dij.dijkstra('V0', 'V24')
     dist_dij = distances['V24']
     
-    collector.add_result('Exemplo_4_Denso', 'Dijkstra', len(vertices), 
+    collector.add_result('Exemplo_4_Denso', 'Dijkstra', 'one-pair', len(vertices), 
                         len(conexoes), dist_dij, len(path), metrics_dij)
     
     # Floyd-Warshall
@@ -425,7 +610,7 @@ def exemplo_4_denso(collector):
     dist_fw = dist_matrix[0][24]
     path_fw = g_fw.get_path('V0', 'V24')
     
-    collector.add_result('Exemplo_4_Denso', 'Floyd_Warshall', len(vertices), 
+    collector.add_result('Exemplo_4_Denso', 'Floyd_Warshall', 'one-pair', len(vertices), 
                         len(conexoes), dist_fw, len(path_fw), metrics_fw)
     
     salvar_grafo_como_imagem("Exemplo_4_Denso", vertices, conexoes, f"{base_path}/graphs")
@@ -434,6 +619,73 @@ def exemplo_4_denso(collector):
     print(f"Dijkstra: Distância = {dist_dij}, Tempo = {metrics_dij['execution_time']:.3f}ms")
     print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
     print(f"Conexões: {len(conexoes)}")
+    print()
+
+def exemplo_4_denso_all_pairs(collector):
+    """Exemplo 4: Grafo denso - 25 vértices com muitas conexões"""
+    print("=== EXEMPLO 4: Grafo Denso (25 vértices) ===")
+    
+    vertices = [f'V{i}' for i in range(25)]
+    
+    # Criar conexões densas
+    import random
+    random.seed(42)
+    conexoes = []
+    
+    for i in range(25):
+        for j in range(i+1, 25):
+            if random.random() < 0.4:  # 40% chance de conexão
+                peso = random.randint(10, 100)
+                conexoes.append((f'V{i}', f'V{j}', peso))
+
+    # Floyd-Warshall (uma vez só)
+    g_fw = FloydWarshallGraph()
+    g_fw.add_vertices(vertices)
+    for origem, destino, peso in conexoes:
+        g_fw.add_edge(origem, destino, peso)
+
+    dist_matrix, metrics_fw = g_fw.floyd_warshall()
+    total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
+
+    collector.add_result('Exemplo_4_Denso', 'Floyd_Warshall', 'all-pairs', len(vertices),
+                        len(conexoes), total_fw_distance, 0, metrics_fw)
+
+    # Dijkstra para todos os pares
+    g_dij = DijkstraGraph()
+    for v in vertices:
+        g_dij.add_vertex(v)
+    for origem, destino, peso in conexoes:
+        g_dij.add_edge(origem, destino, peso)
+
+    execution_time_total = 0
+    memory_usage_total = 0
+    comparisons_total = 0
+    iterations_total = 0
+    total_distance = 0
+
+    for i in vertices:
+        distances, _, _, metrics = g_dij.dijkstra(i)
+        total_distance += sum(distances[v] for v in vertices if distances[v] < float('inf'))
+        comparisons_total += metrics['comparisons']
+        execution_time_total += metrics['execution_time']
+        memory_usage_total += metrics['memory_usage']
+        iterations_total += metrics['iterations']
+
+
+    metrics_dij_all_pairs = {
+        'execution_time': execution_time_total,
+        'memory_usage': memory_usage_total,
+        'comparisons': comparisons_total,
+        'iterations': iterations_total,
+    }
+
+    collector.add_result('Exemplo_4_Denso', 'Dijkstra', 'all-pairs', len(vertices),
+                        len(conexoes), total_distance, 0, metrics_dij_all_pairs)
+
+    salvar_grafo_como_imagem("Exemplo_4_Denso", vertices, conexoes, f"{base_path}/graphs")
+
+    print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
+    print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
     print()
 
 def exemplo_5_muito_complexo(collector):
@@ -475,7 +727,7 @@ def exemplo_5_muito_complexo(collector):
     distances, predecessors, path, metrics_dij = g_dij.dijkstra('N0', 'N49')
     dist_dij = distances['N49']
     
-    collector.add_result('Exemplo_5_Complexo', 'Dijkstra', len(vertices), 
+    collector.add_result('Exemplo_5_Complexo', 'Dijkstra', 'one-pair', len(vertices), 
                         len(conexoes), dist_dij, len(path), metrics_dij)
     
     # Floyd-Warshall
@@ -488,7 +740,7 @@ def exemplo_5_muito_complexo(collector):
     dist_fw = dist_matrix[0][49]
     path_fw = g_fw.get_path('N0', 'N49')
     
-    collector.add_result('Exemplo_5_Complexo', 'Floyd_Warshall', len(vertices), 
+    collector.add_result('Exemplo_5_Complexo', 'Floyd_Warshall', 'one-pair', len(vertices), 
                         len(conexoes), dist_fw, len(path_fw), metrics_fw)
     
     salvar_grafo_como_imagem("Exemplo_5_Complexo", vertices, conexoes, f"{base_path}/graphs")
@@ -498,6 +750,85 @@ def exemplo_5_muito_complexo(collector):
     print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
     print(f"Conexões: {len(conexoes)}")
     print()
+
+def exemplo_5_super_denso_all_pairs(collector):
+    """Exemplo 5: Rede muito complexa - 50 vértices"""
+    print("=== EXEMPLO 5: Rede Muito Complexa (50 vértices) ===")
+    
+    vertices = [f'N{i}' for i in range(50)]
+    
+    # Criar uma rede complexa
+    import random
+    random.seed(123)
+    conexoes = []
+    
+    # Conexões em cadeia
+    for i in range(49):
+        peso = random.randint(5, 50)
+        conexoes.append((f'N{i}', f'N{i+1}', peso))
+    
+    # Conexões de atalho
+    for i in range(0, 50, 5):
+        for j in range(i+10, min(50, i+20)):
+            if random.random() < 0.3:
+                peso = random.randint(20, 80)
+                conexoes.append((f'N{i}', f'N{j}', peso))
+    
+    # Conexões aleatórias adicionais
+    for _ in range(100):
+        i, j = random.sample(range(50), 2)
+        peso = random.randint(15, 90)
+        conexoes.append((f'N{i}', f'N{j}', peso))
+
+    # Floyd-Warshall (uma vez só)
+    g_fw = FloydWarshallGraph()
+    g_fw.add_vertices(vertices)
+    for origem, destino, peso in conexoes:
+        g_fw.add_edge(origem, destino, peso)
+
+    dist_matrix, metrics_fw = g_fw.floyd_warshall()
+    total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
+
+    collector.add_result('Exemplo_5_Complexo', 'Floyd_Warshall', 'all-pairs', len(vertices),
+                        len(conexoes), total_fw_distance, 0, metrics_fw)
+
+    # Dijkstra para todos os pares
+    g_dij = DijkstraGraph()
+    for v in vertices:
+        g_dij.add_vertex(v)
+    for origem, destino, peso in conexoes:
+        g_dij.add_edge(origem, destino, peso)
+
+    execution_time_total = 0
+    memory_usage_total = 0
+    comparisons_total = 0
+    iterations_total = 0
+    total_distance = 0
+
+    for i in vertices:
+        distances, _, _, metrics = g_dij.dijkstra(i)
+        total_distance += sum(distances[v] for v in vertices if distances[v] < float('inf'))
+        comparisons_total += metrics['comparisons']
+        execution_time_total += metrics['execution_time']
+        memory_usage_total += metrics['memory_usage']
+        iterations_total += metrics['iterations']
+
+
+    metrics_dij_all_pairs = {
+        'execution_time': execution_time_total,
+        'memory_usage': memory_usage_total,
+        'comparisons': comparisons_total,
+        'iterations': iterations_total,
+    }
+
+    collector.add_result('Exemplo_5_Complexo', 'Dijkstra', 'all-pairs', len(vertices),
+                        len(conexoes), total_distance, 0, metrics_dij_all_pairs)
+
+    salvar_grafo_como_imagem("Exemplo_5_Complexo", vertices, conexoes, f"{base_path}/graphs")
+
+    print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
+    print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
+    print()    
 
 def exemplo_6_denso_floyd(collector):
     """Exemplo 6: Grafo Denso com 20 vértices - Ideal para Floyd-Warshall"""
@@ -550,7 +881,58 @@ def exemplo_6_denso_floyd(collector):
     print(f"Total de conexões: {len(conexoes)}")
     print()
 
-def exemplo_7_todos_os_pares(collector):
+def exemplo_7_super_denso(collector):
+    """Exemplo 7: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
+    print("=== EXEMPLO 7: Todos os pares (100 vértices) ===")
+    
+    import random
+    random.seed(777)
+    
+    vertices = [f'N{i}' for i in range(100)]
+    conexoes = []
+    
+    # Grafo denso (~60% de todas as conexões)
+    for i in range(len(vertices)):
+        for j in range(i + 1, len(vertices)):
+            if random.random() < 0.6:
+                peso = random.randint(1, 50)
+                conexoes.append((vertices[i], vertices[j], peso))
+    
+    # Dijkstra
+    g_dij = DijkstraGraph()
+    for v in vertices:
+        g_dij.add_vertex(v)
+    for origem, destino, peso in conexoes:
+        g_dij.add_edge(origem, destino, peso)
+    
+    distances, predecessors, path, metrics_dij = g_dij.dijkstra('N0', 'N99')
+    dist_dij = distances['N99']
+    
+    collector.add_result('Exemplo_7_Super_Denso', 'Dijkstra', 'one-pair', len(vertices), 
+                        len(conexoes), dist_dij, len(path), metrics_dij)
+    
+    # Floyd-Warshall
+    g_fw = FloydWarshallGraph()
+    g_fw.add_vertices(vertices)
+    for origem, destino, peso in conexoes:
+        g_fw.add_edge(origem, destino, peso)
+    
+    dist_matrix, metrics_fw = g_fw.floyd_warshall()
+    dist_fw = dist_matrix[0][99]
+    path_fw = g_fw.get_path('N0', 'N99')
+    
+    collector.add_result('Exemplo_7_Super_Denso', 'Floyd_Warshall', 'one-pair', len(vertices), 
+                        len(conexoes), dist_fw, len(path_fw), metrics_fw)
+    
+    salvar_grafo_como_imagem("Exemplo_7_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
+    salvar_grafo_com_caminho("Exemplo_7_Super_Denso", vertices, conexoes, f"{base_path}/graphs", path)
+
+    print(f"Dijkstra: Distância = {dist_dij}, Tempo = {metrics_dij['execution_time']:.3f}ms")
+    print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
+    print(f"Conexões: {len(conexoes)}")
+    print()
+
+def exemplo_7_super_denso_all_pairs(collector):
     """Exemplo 7: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
     print("=== EXEMPLO 7: Todos os pares (100 vértices) ===")
     
@@ -576,7 +958,7 @@ def exemplo_7_todos_os_pares(collector):
     dist_matrix, metrics_fw = g_fw.floyd_warshall()
     total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
 
-    collector.add_result('Exemplo_7_Todos_Pares', 'Floyd_Warshall', len(vertices),
+    collector.add_result('Exemplo_7_Super_Denso', 'Floyd_Warshall', 'all-pairs', len(vertices),
                          len(conexoes), total_fw_distance, 0, metrics_fw)
 
     # Dijkstra para todos os pares
@@ -600,6 +982,122 @@ def exemplo_7_todos_os_pares(collector):
         memory_usage_total += metrics['memory_usage']
         iterations_total += metrics['iterations']
 
+    metrics_dij_all_pairs = {
+        'execution_time': execution_time_total,
+        'memory_usage': memory_usage_total,
+        'comparisons': comparisons_total,
+        'iterations': iterations_total,
+    }
+
+    collector.add_result('Exemplo_7_Super_Denso', 'Dijkstra', 'all-pairs', len(vertices),
+                         len(conexoes), total_distance, 0, metrics_dij_all_pairs)
+
+    salvar_grafo_como_imagem("Exemplo_7_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
+
+    print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
+    print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
+    print()
+
+def exemplo_8_super_denso(collector):
+    """Exemplo 8: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
+    print("=== EXEMPLO 8: Todos os pares (150 vértices) ===")
+    
+    import random
+    random.seed(888)
+    
+    vertices = [f'N{i}' for i in range(150)]
+    conexoes = []
+    
+    # Grafo denso (~60% de todas as conexões)
+    for i in range(len(vertices)):
+        for j in range(i + 1, len(vertices)):
+            if random.random() < 0.6:
+                peso = random.randint(1, 50)
+                conexoes.append((vertices[i], vertices[j], peso))
+    
+    # Dijkstra
+    g_dij = DijkstraGraph()
+    for v in vertices:
+        g_dij.add_vertex(v)
+    for origem, destino, peso in conexoes:
+        g_dij.add_edge(origem, destino, peso)
+    
+    distances, predecessors, path, metrics_dij = g_dij.dijkstra('N0', 'N149')
+    dist_dij = distances['N149']
+    
+    collector.add_result('Exemplo_8_Super_Super_Denso', 'Dijkstra', 'one-pair', len(vertices), 
+                        len(conexoes), dist_dij, len(path), metrics_dij)
+    
+    # Floyd-Warshall
+    g_fw = FloydWarshallGraph()
+    g_fw.add_vertices(vertices)
+    for origem, destino, peso in conexoes:
+        g_fw.add_edge(origem, destino, peso)
+    
+    dist_matrix, metrics_fw = g_fw.floyd_warshall()
+    dist_fw = dist_matrix[0][149]
+    path_fw = g_fw.get_path('N0', 'N149')
+    
+    collector.add_result('Exemplo_8_Super_Super_Denso', 'Floyd_Warshall', 'one-pair', len(vertices), 
+                        len(conexoes), dist_fw, len(path_fw), metrics_fw)
+    
+    salvar_grafo_como_imagem("Exemplo_8_Super_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
+    salvar_grafo_com_caminho("Exemplo_8_Super_Super_Denso", vertices, conexoes, f"{base_path}/graphs", path)
+
+    print(f"Dijkstra: Distância = {dist_dij}, Tempo = {metrics_dij['execution_time']:.3f}ms")
+    print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
+    print(f"Conexões: {len(conexoes)}")
+    print()
+
+def exemplo_8_super_denso_all_pairs(collector):
+    """Exemplo 8: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
+    print("=== EXEMPLO 8: Todos os pares (150 vértices) ===")
+    
+    import random
+    random.seed(888)
+    
+    vertices = [f'N{i}' for i in range(150)]
+    conexoes = []
+    
+    # Grafo denso (~60% de todas as conexões)
+    for i in range(len(vertices)):
+        for j in range(i + 1, len(vertices)):
+            if random.random() < 0.6:
+                peso = random.randint(1, 50)
+                conexoes.append((vertices[i], vertices[j], peso))
+    
+    # Floyd-Warshall (uma vez só)
+    g_fw = FloydWarshallGraph()
+    g_fw.add_vertices(vertices)
+    for origem, destino, peso in conexoes:
+        g_fw.add_edge(origem, destino, peso)
+    
+    dist_matrix, metrics_fw = g_fw.floyd_warshall()
+    total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
+
+    collector.add_result('Exemplo_8_Super_Super_Denso', 'Floyd_Warshall', 'all-pairs', len(vertices),
+                         len(conexoes), total_fw_distance, 0, metrics_fw)
+
+    # Dijkstra para todos os pares
+    g_dij = DijkstraGraph()
+    for v in vertices:
+        g_dij.add_vertex(v)
+    for origem, destino, peso in conexoes:
+        g_dij.add_edge(origem, destino, peso)
+
+    execution_time_total = 0
+    memory_usage_total = 0
+    comparisons_total = 0
+    iterations_total = 0
+    total_distance = 0
+
+    for i in vertices:
+        distances, _, _, metrics = g_dij.dijkstra(i)
+        total_distance += sum(distances[v] for v in vertices if distances[v] < float('inf'))
+        comparisons_total += metrics['comparisons']
+        execution_time_total += metrics['execution_time']
+        memory_usage_total += metrics['memory_usage']
+        iterations_total += metrics['iterations']
 
     metrics_dij_all_pairs = {
         'execution_time': execution_time_total,
@@ -608,10 +1106,10 @@ def exemplo_7_todos_os_pares(collector):
         'iterations': iterations_total,
     }
 
-    collector.add_result('Exemplo_7_Todos_Pares', 'Dijkstra', len(vertices),
+    collector.add_result('Exemplo_8_Super_Super_Denso', 'Dijkstra', 'all-pairs', len(vertices),
                          len(conexoes), total_distance, 0, metrics_dij_all_pairs)
 
-    salvar_grafo_como_imagem("Exemplo_7_Todos_Pares", vertices, conexoes, f"{base_path}/graphs")
+    salvar_grafo_como_imagem("Exemplo_8_Super_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
 
     print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
     print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
@@ -631,7 +1129,16 @@ def comparacao_completa():
     exemplo_4_denso(collector)
     exemplo_5_muito_complexo(collector)
     # exemplo_6_denso_floyd(collector)
-    exemplo_7_todos_os_pares(collector)
+    exemplo_7_super_denso(collector)
+    exemplo_8_super_denso(collector)
+
+    exemplo_1_basico_all_pairs(collector)
+    exemplo_2_medio_all_pairs(collector)
+    exemplo_3_complexo_all_pairs(collector)
+    exemplo_4_denso_all_pairs(collector)
+    exemplo_5_super_denso_all_pairs(collector)
+    exemplo_7_super_denso_all_pairs(collector)
+    exemplo_8_super_denso_all_pairs(collector)
     
     # Salvar métricas em CSV
     collector.save_to_csv('algorithm_comparison.csv')
@@ -867,12 +1374,15 @@ def load_data(filename='algorithm_comparison.csv'):
         print(f"Arquivo {filename} não encontrado.")
         return None
 
-def create_execution_time_chart(df, output_dir):
+def create_execution_time_chart(df, hm_pairs='one-pair', output_dir=''):
     """Gráfico 1: Tempo de Execução por Exemplo"""
     plt.figure(figsize=(12, 7))
-    
+
+    df = df.query(f"hm_pairs == '{hm_pairs}'")
+        
     # Preparar dados
     examples = df['example'].unique()
+    num_vertices = df['num_vertices'].unique()
     dijkstra_times = []
     floyd_times = []
     
@@ -881,7 +1391,7 @@ def create_execution_time_chart(df, output_dir):
         floyd_time = df[(df['example'] == example) & (df['algorithm'] == 'Floyd_Warshall')]['execution_time_ms'].iloc[0]
         dijkstra_times.append(dij_time)
         floyd_times.append(floyd_time)
-    
+
     # Criar gráfico de barras
     x = np.arange(len(examples))
     width = 0.35
@@ -902,18 +1412,22 @@ def create_execution_time_chart(df, output_dir):
     
     plt.xlabel('Exemplos de Grafos')
     plt.ylabel('Tempo de Execução (ms)')
-    plt.title('Comparação de Tempo de Execução: Dijkstra vs Floyd-Warshall')
-    plt.xticks(x, [e.replace('Exemplo_', '').replace('_', ' ') for e in examples], rotation=45)
+    plt.title('Comparação de Tempo de Execução: Dijkstra vs Floyd-Warshall'+(' - um par' if hm_pairs == 'one-pair' else ' - todos os pares'))
+
+    plt.xticks(x, [e.replace('Exemplo_', '').replace('_', ' ')+f" - {num_vertices[i]} vértices" for (i, e) in enumerate(examples)], rotation=45)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/01_tempo_execucao.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/01_tempo_execucao_{hm_pairs}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-def create_memory_usage_chart(df, output_dir):
+def create_memory_usage_chart(df, hm_pairs='one-pair', output_dir=''):
     """Gráfico 2: Uso de Memória por Exemplo"""
     plt.figure(figsize=(12, 7))
+
+    df = df.query(f"hm_pairs == '{hm_pairs}'")
     
     examples = df['example'].unique()
+    num_vertices = df['num_vertices'].unique()
     dijkstra_memory = []
     floyd_memory = []
     
@@ -942,18 +1456,21 @@ def create_memory_usage_chart(df, output_dir):
     
     plt.xlabel('Exemplos de Grafos')
     plt.ylabel('Uso de Memória (KB)')
-    plt.title('Comparação de Uso de Memória: Dijkstra vs Floyd-Warshall')
-    plt.xticks(x, [e.replace('Exemplo_', '').replace('_', ' ') for e in examples], rotation=45)
+    plt.title('Comparação de Uso de Memória: Dijkstra vs Floyd-Warshall'+(' - um par' if hm_pairs == 'one-pair' else ' - todos os pares'))
+    plt.xticks(x, [e.replace('Exemplo_', '').replace('_', ' ')+f" - {num_vertices[i]} vértices" for (i, e) in enumerate(examples)], rotation=45)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/02_uso_memoria.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/02_uso_memoria_{hm_pairs}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-def create_comparisons_chart(df, output_dir):
+def create_comparisons_chart(df, hm_pairs='one-pair', output_dir=''):
     """Gráfico 3: Número de Comparações"""
     plt.figure(figsize=(12, 7))
+
+    df = df.query(f"hm_pairs == '{hm_pairs}'")
     
     examples = df['example'].unique()
+    num_vertices = df['num_vertices'].unique()
     dijkstra_comp = []
     floyd_comp_array = []
     
@@ -982,18 +1499,21 @@ def create_comparisons_chart(df, output_dir):
     
     plt.xlabel('Exemplos de Grafos')
     plt.ylabel('Número de Comparações')
-    plt.title('Comparação do Número de Comparações: Dijkstra vs Floyd-Warshall')
-    plt.xticks(x, [e.replace('Exemplo_', '').replace('_', ' ') for e in examples], rotation=45)
+    plt.title('Comparação do Número de Comparações: Dijkstra vs Floyd-Warshall'+(' - um par' if hm_pairs == 'one-pair' else ' - todos os pares'))
+    plt.xticks(x, [e.replace('Exemplo_', '').replace('_', ' ')+f" - {num_vertices[i]} vértices" for (i, e) in enumerate(examples)], rotation=45)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/03_comparacoes.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/03_comparacoes_{hm_pairs}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-def create_iterations_chart(df, output_dir):
+def create_iterations_chart(df, hm_pairs='one-pair', output_dir=''):
     """Gráfico 4: Número de Iterações"""
     plt.figure(figsize=(12, 7))
+
+    df = df.query(f"hm_pairs == '{hm_pairs}'")
     
     examples = df['example'].unique()
+    num_vertices = df['num_vertices'].unique()
     dijkstra_iter = []
     floyd_iter_array = []
     
@@ -1022,16 +1542,18 @@ def create_iterations_chart(df, output_dir):
     
     plt.xlabel('Exemplos de Grafos')
     plt.ylabel('Número de Iterações')
-    plt.title('Comparação do Número de Iterações: Dijkstra vs Floyd-Warshall')
-    plt.xticks(x, [e.replace('Exemplo_', '').replace('_', ' ') for e in examples], rotation=45)
+    plt.title('Comparação do Número de Iterações: Dijkstra vs Floyd-Warshall'+(' - um par' if hm_pairs == 'one-pair' else ' - todos os pares'))
+    plt.xticks(x, [e.replace('Exemplo_', '').replace('_', ' ')+f" - {num_vertices[i]} vértices" for (i, e) in enumerate(examples)], rotation=45)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/04_iteracoes.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/04_iteracoes_{hm_pairs}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-def create_scalability_time_chart(df, output_dir):
+def create_scalability_time_chart(df, hm_pairs='one-pair', output_dir=''):
     """Gráfico 5: Escalabilidade - Tempo vs Número de Vértices (Linha)"""
     plt.figure(figsize=(12, 8))
+
+    df = df.query(f"hm_pairs == '{hm_pairs}'")
     
     # Ordenar por número de vértices
     df_sorted = df.sort_values('num_vertices')
@@ -1060,7 +1582,7 @@ def create_scalability_time_chart(df, output_dir):
     
     plt.xlabel('Número de Vértices (V)')
     plt.ylabel('Tempo de Execução (ms)')
-    plt.title('Análise de Complexidade: Tempo de Execução vs Número de Vértices')
+    plt.title('Análise de Complexidade: Tempo de Execução vs Número de Vértices'+(' - um par' if hm_pairs == 'one-pair' else ' - todos os pares'))
     plt.legend()
     plt.grid(True, alpha=0.3)
     
@@ -1072,12 +1594,14 @@ def create_scalability_time_chart(df, output_dir):
         plt.annotate(f'{t:.2f}ms', (v, t), xytext=(5, -15), textcoords='offset points', fontsize=9)
     
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/05_escalabilidade_tempo.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/05_escalabilidade_tempo_{hm_pairs}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-def create_scalability_memory_chart(df, output_dir):
+def create_scalability_memory_chart(df, hm_pairs='one-pair', output_dir=''):
     """Gráfico 6: Escalabilidade - Memória vs Número de Vértices (Linha)"""
     plt.figure(figsize=(12, 8))
+
+    df = df.query(f"hm_pairs == '{hm_pairs}'")
     
     df_sorted = df.sort_values('num_vertices')
     
@@ -1105,7 +1629,7 @@ def create_scalability_memory_chart(df, output_dir):
     
     plt.xlabel('Número de Vértices (V)')
     plt.ylabel('Uso de Memória (KB)')
-    plt.title('Análise de Complexidade: Uso de Memória vs Número de Vértices')
+    plt.title('Análise de Complexidade: Uso de Memória vs Número de Vértices'+(' - um par' if hm_pairs == 'one-pair' else ' - todos os pares'))
     plt.legend()
     plt.grid(True, alpha=0.3)
     
@@ -1117,12 +1641,14 @@ def create_scalability_memory_chart(df, output_dir):
         plt.annotate(f'{m:.1f}KB', (v, m), xytext=(5, -15), textcoords='offset points', fontsize=9)
     
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/06_escalabilidade_memoria.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/06_escalabilidade_memoria_{hm_pairs}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-def create_complexity_analysis_chart(df, output_dir):
+def create_complexity_analysis_chart(df, hm_pairs='one-pair', output_dir=''):
     """Gráfico 7: Análise de Complexidade Comparativa"""
     plt.figure(figsize=(14, 10))
+
+    df = df.query(f"hm_pairs == '{hm_pairs}'")
     
     # Criar subplot com 2x2
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
@@ -1175,14 +1701,16 @@ def create_complexity_analysis_chart(df, output_dir):
     ax4.legend()
     ax4.grid(True, alpha=0.3)
     
-    plt.suptitle('Análise Completa de Complexidade: Dijkstra vs Floyd-Warshall', fontsize=16)
+    plt.suptitle('Análise Completa de Complexidade: Dijkstra vs Floyd-Warshall'+(' - um par' if hm_pairs == 'one-pair' else ' - todos os pares'), fontsize=16)
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/07_analise_complexidade.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/07_analise_complexidade_{hm_pairs}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-def create_performance_ratio_chart(df, output_dir):
+def create_performance_ratio_chart(df, hm_pairs='one-pair', output_dir=''):
     """Gráfico 8: Razão de Performance (Floyd/Dijkstra)"""
     plt.figure(figsize=(12, 8))
+
+    df = df.query(f"hm_pairs == '{hm_pairs}'")
     
     examples = df['example'].unique()
     time_ratios = []
@@ -1219,7 +1747,7 @@ def create_performance_ratio_chart(df, output_dir):
     # Adicionar linha de referência (y=1)
     ax1.axhline(y=1, color='black', linestyle='--', alpha=0.5, label='Paridade (1:1)')
     
-    plt.title('Razão de Performance: Floyd-Warshall / Dijkstra\n(Valores > 1 indicam que Floyd-Warshall é pior)')
+    plt.title('Razão de Performance: Floyd-Warshall / Dijkstra\n(Valores > 1 indicam que Floyd-Warshall é pior)'+(' - um par' if hm_pairs == 'one-pair' else ' - todos os pares'))
     
     # Adicionar anotações
     for i, (v, tr, mr) in enumerate(zip(vertices, time_ratios, memory_ratios)):
@@ -1227,7 +1755,7 @@ def create_performance_ratio_chart(df, output_dir):
         ax2.annotate(f'{mr:.1f}x', (v, mr), xytext=(5, -15), textcoords='offset points', fontsize=9, color='blue')
     
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/08_razao_performance.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/08_razao_performance_{hm_pairs}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
 def create_theoretical_complexity_chart(output_dir):
@@ -1369,30 +1897,56 @@ def generate_all_charts(csv_file='algorithm_comparison.csv', output_dir='charts'
     print("Gerando gráficos individuais...")
     
     # Gerar cada gráfico
-    create_execution_time_chart(df, output_dir)
+    create_execution_time_chart(df, 'one-pair', output_dir)
     print("✓ Gráfico 1: Tempo de Execução")
     
-    create_memory_usage_chart(df, output_dir)
+    create_memory_usage_chart(df, 'one-pair', output_dir)
     print("✓ Gráfico 2: Uso de Memória")
     
-    create_comparisons_chart(df, output_dir)
+    create_comparisons_chart(df, 'one-pair', output_dir)
     print("✓ Gráfico 3: Comparações")
     
-    create_iterations_chart(df, output_dir)
+    create_iterations_chart(df, 'one-pair', output_dir)
     print("✓ Gráfico 4: Iterações")
     
-    create_scalability_time_chart(df, output_dir)
+    create_scalability_time_chart(df, 'one-pair', output_dir)
     print("✓ Gráfico 5: Escalabilidade de Tempo")
     
-    create_scalability_memory_chart(df, output_dir)
+    create_scalability_memory_chart(df, 'one-pair', output_dir)
     print("✓ Gráfico 6: Escalabilidade de Memória")
     
-    create_complexity_analysis_chart(df, output_dir)
+    create_complexity_analysis_chart(df, 'one-pair', output_dir)
     print("✓ Gráfico 7: Análise de Complexidade")
     
-    create_performance_ratio_chart(df, output_dir)
+    create_performance_ratio_chart(df, 'one-pair', output_dir)
     print("✓ Gráfico 8: Razão de Performance")
+
+    # Gerar cada gráfico
+    create_execution_time_chart(df, 'all-pairs', output_dir)
+    print("✓ Gráfico 1.1: Tempo de Execução")
     
+    create_memory_usage_chart(df, 'all-pairs', output_dir)
+    print("✓ Gráfico 2.1: Uso de Memória")
+    
+    create_comparisons_chart(df, 'all-pairs', output_dir)
+    print("✓ Gráfico 3.1: Comparações")
+    
+    create_iterations_chart(df, 'all-pairs', output_dir)
+    print("✓ Gráfico 4.1: Iterações")
+    
+    create_scalability_time_chart(df, 'all-pairs', output_dir)
+    print("✓ Gráfico 5.1: Escalabilidade de Tempo")
+    
+    create_scalability_memory_chart(df, 'all-pairs', output_dir)
+    print("✓ Gráfico 6.1: Escalabilidade de Memória")
+    
+    create_complexity_analysis_chart(df, 'all-pairs', output_dir)
+    print("✓ Gráfico 7.1: Análise de Complexidade")
+    
+    create_performance_ratio_chart(df, 'all-pairs', output_dir)
+    print("✓ Gráfico 8.1: Razão de Performance")
+    
+    # --- Complexidade Teórica ---
     create_theoretical_complexity_chart(output_dir)
     print("✓ Gráfico 9: Complexidade Teórica")
     
