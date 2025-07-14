@@ -830,60 +830,9 @@ def exemplo_5_super_denso_all_pairs(collector):
     print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
     print()    
 
-def exemplo_6_denso_floyd(collector):
-    """Exemplo 6: Grafo Denso com 20 vértices - Ideal para Floyd-Warshall"""
-    print("=== EXEMPLO 6: Grafo Denso (20 vértices) ===")
-    
-    vertices = [f'V{i}' for i in range(20)]
-    conexoes = []
-
-    import random
-    random.seed(2025)
-
-    # Gerar um grafo denso: ~80% de conexões possíveis
-    for i in range(len(vertices)):
-        for j in range(i+1, len(vertices)):
-            if random.random() < 0.8:  # 80% chance de conexão
-                peso = random.randint(1, 20)
-                conexoes.append((vertices[i], vertices[j], peso))
-
-    # Dijkstra
-    g_dij = DijkstraGraph()
-    for v in vertices:
-        g_dij.add_vertex(v)
-    for origem, destino, peso in conexoes:
-        g_dij.add_edge(origem, destino, peso)
-
-    distances, predecessors, path, metrics_dij = g_dij.dijkstra('V0', 'V19')
-    dist_dij = distances['V19']
-
-    collector.add_result('Exemplo_6_Denso_Floyd', 'Dijkstra', len(vertices), 
-                         len(conexoes), dist_dij, len(path), metrics_dij)
-
-    # Floyd-Warshall
-    g_fw = FloydWarshallGraph()
-    g_fw.add_vertices(vertices)
-    for origem, destino, peso in conexoes:
-        g_fw.add_edge(origem, destino, peso)
-
-    dist_matrix, metrics_fw = g_fw.floyd_warshall()
-    dist_fw = dist_matrix[0][19]
-    path_fw = g_fw.get_path('V0', 'V19')
-
-    collector.add_result('Exemplo_6_Denso_Floyd', 'Floyd_Warshall', len(vertices), 
-                         len(conexoes), dist_fw, len(path_fw), metrics_fw)
-
-    salvar_grafo_como_imagem("Exemplo_6_Denso_Floyd", vertices, conexoes, f"{base_path}/graphs")
-    # salvar_grafo_com_caminho("Exemplo_6_Denso_Floyd", vertices, conexoes, f"{base_path}/graphs", path)
-
-    print(f"Dijkstra: Distância = {dist_dij}, Tempo = {metrics_dij['execution_time']:.3f}ms")
-    print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
-    print(f"Total de conexões: {len(conexoes)}")
-    print()
-
-def exemplo_7_super_denso(collector):
-    """Exemplo 7: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
-    print("=== EXEMPLO 7: Todos os pares (100 vértices) ===")
+def exemplo_6_super_denso(collector):
+    """Exemplo 6: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
+    print("=== EXEMPLO 6: Todos os pares (100 vértices) ===")
     
     import random
     random.seed(777)
@@ -908,7 +857,7 @@ def exemplo_7_super_denso(collector):
     distances, predecessors, path, metrics_dij = g_dij.dijkstra('N0', 'N99')
     dist_dij = distances['N99']
     
-    collector.add_result('Exemplo_7_Super_Denso', 'Dijkstra', 'one-pair', len(vertices), 
+    collector.add_result('Exemplo_6_Super_Denso', 'Dijkstra', 'one-pair', len(vertices), 
                         len(conexoes), dist_dij, len(path), metrics_dij)
     
     # Floyd-Warshall
@@ -921,20 +870,20 @@ def exemplo_7_super_denso(collector):
     dist_fw = dist_matrix[0][99]
     path_fw = g_fw.get_path('N0', 'N99')
     
-    collector.add_result('Exemplo_7_Super_Denso', 'Floyd_Warshall', 'one-pair', len(vertices), 
+    collector.add_result('Exemplo_6_Super_Denso', 'Floyd_Warshall', 'one-pair', len(vertices), 
                         len(conexoes), dist_fw, len(path_fw), metrics_fw)
     
-    salvar_grafo_como_imagem("Exemplo_7_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
-    salvar_grafo_com_caminho("Exemplo_7_Super_Denso", vertices, conexoes, f"{base_path}/graphs", path)
+    salvar_grafo_como_imagem("Exemplo_6_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
+    salvar_grafo_com_caminho("Exemplo_6_Super_Denso", vertices, conexoes, f"{base_path}/graphs", path)
 
     print(f"Dijkstra: Distância = {dist_dij}, Tempo = {metrics_dij['execution_time']:.3f}ms")
     print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
     print(f"Conexões: {len(conexoes)}")
     print()
 
-def exemplo_7_super_denso_all_pairs(collector):
-    """Exemplo 7: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
-    print("=== EXEMPLO 7: Todos os pares (100 vértices) ===")
+def exemplo_6_super_denso_all_pairs(collector):
+    """Exemplo 6: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
+    print("=== EXEMPLO 6: Todos os pares (100 vértices) ===")
     
     import random
     random.seed(777)
@@ -958,7 +907,7 @@ def exemplo_7_super_denso_all_pairs(collector):
     dist_matrix, metrics_fw = g_fw.floyd_warshall()
     total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
 
-    collector.add_result('Exemplo_7_Super_Denso', 'Floyd_Warshall', 'all-pairs', len(vertices),
+    collector.add_result('Exemplo_6_Super_Denso', 'Floyd_Warshall', 'all-pairs', len(vertices),
                          len(conexoes), total_fw_distance, 0, metrics_fw)
 
     # Dijkstra para todos os pares
@@ -989,29 +938,29 @@ def exemplo_7_super_denso_all_pairs(collector):
         'iterations': iterations_total,
     }
 
-    collector.add_result('Exemplo_7_Super_Denso', 'Dijkstra', 'all-pairs', len(vertices),
+    collector.add_result('Exemplo_6_Super_Denso', 'Dijkstra', 'all-pairs', len(vertices),
                          len(conexoes), total_distance, 0, metrics_dij_all_pairs)
 
-    salvar_grafo_como_imagem("Exemplo_7_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
+    salvar_grafo_como_imagem("Exemplo_6_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
 
     print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
     print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
     print()
 
-def exemplo_8_super_denso(collector):
-    """Exemplo 8: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
-    print("=== EXEMPLO 8: Todos os pares (150 vértices) ===")
+def exemplo_7_hyper_denso(collector):
+    """Exemplo 7: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
+    print("=== EXEMPLO 7: Todos os pares (250 vértices) ===")
     
     import random
     random.seed(888)
     
-    vertices = [f'N{i}' for i in range(150)]
+    vertices = [f'N{i}' for i in range(250)]
     conexoes = []
     
-    # Grafo denso (~60% de todas as conexões)
+    # Grafo denso (~80% de todas as conexões)
     for i in range(len(vertices)):
         for j in range(i + 1, len(vertices)):
-            if random.random() < 0.6:
+            if random.random() < 0.8:
                 peso = random.randint(1, 50)
                 conexoes.append((vertices[i], vertices[j], peso))
     
@@ -1022,10 +971,10 @@ def exemplo_8_super_denso(collector):
     for origem, destino, peso in conexoes:
         g_dij.add_edge(origem, destino, peso)
     
-    distances, predecessors, path, metrics_dij = g_dij.dijkstra('N0', 'N149')
-    dist_dij = distances['N149']
+    distances, predecessors, path, metrics_dij = g_dij.dijkstra('N0', 'N249')
+    dist_dij = distances['N249']
     
-    collector.add_result('Exemplo_8_Super_Super_Denso', 'Dijkstra', 'one-pair', len(vertices), 
+    collector.add_result('Exemplo_7_Hyper_Denso', 'Dijkstra', 'one-pair', len(vertices), 
                         len(conexoes), dist_dij, len(path), metrics_dij)
     
     # Floyd-Warshall
@@ -1035,34 +984,34 @@ def exemplo_8_super_denso(collector):
         g_fw.add_edge(origem, destino, peso)
     
     dist_matrix, metrics_fw = g_fw.floyd_warshall()
-    dist_fw = dist_matrix[0][149]
-    path_fw = g_fw.get_path('N0', 'N149')
+    dist_fw = dist_matrix[0][249]
+    path_fw = g_fw.get_path('N0', 'N249')
     
-    collector.add_result('Exemplo_8_Super_Super_Denso', 'Floyd_Warshall', 'one-pair', len(vertices), 
+    collector.add_result('Exemplo_7_Hyper_Denso', 'Floyd_Warshall', 'one-pair', len(vertices), 
                         len(conexoes), dist_fw, len(path_fw), metrics_fw)
     
-    salvar_grafo_como_imagem("Exemplo_8_Super_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
-    salvar_grafo_com_caminho("Exemplo_8_Super_Super_Denso", vertices, conexoes, f"{base_path}/graphs", path)
+    salvar_grafo_como_imagem("Exemplo_7_Hyper_Denso", vertices, conexoes, f"{base_path}/graphs")
+    salvar_grafo_com_caminho("Exemplo_7_Hyper_Denso", vertices, conexoes, f"{base_path}/graphs", path)
 
     print(f"Dijkstra: Distância = {dist_dij}, Tempo = {metrics_dij['execution_time']:.3f}ms")
     print(f"Floyd-Warshall: Distância = {dist_fw}, Tempo = {metrics_fw['execution_time']:.3f}ms")
     print(f"Conexões: {len(conexoes)}")
     print()
 
-def exemplo_8_super_denso_all_pairs(collector):
-    """Exemplo 8: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
-    print("=== EXEMPLO 8: Todos os pares (150 vértices) ===")
+def exemplo_7_hyper_denso_all_pairs(collector):
+    """Exemplo 7: Cálculo de todos os pares com Dijkstra x Floyd-Warshall"""
+    print("=== EXEMPLO 7: Todos os pares (250 vértices) ===")
     
     import random
     random.seed(888)
     
-    vertices = [f'N{i}' for i in range(150)]
+    vertices = [f'N{i}' for i in range(250)]
     conexoes = []
     
-    # Grafo denso (~60% de todas as conexões)
+    # Grafo denso (~80% de todas as conexões)
     for i in range(len(vertices)):
         for j in range(i + 1, len(vertices)):
-            if random.random() < 0.6:
+            if random.random() < 0.8:
                 peso = random.randint(1, 50)
                 conexoes.append((vertices[i], vertices[j], peso))
     
@@ -1075,7 +1024,7 @@ def exemplo_8_super_denso_all_pairs(collector):
     dist_matrix, metrics_fw = g_fw.floyd_warshall()
     total_fw_distance = sum(sum(row) for row in dist_matrix if all(isinstance(v, (int, float)) for v in row))
 
-    collector.add_result('Exemplo_8_Super_Super_Denso', 'Floyd_Warshall', 'all-pairs', len(vertices),
+    collector.add_result('Exemplo_7_Hyper_Denso', 'Floyd_Warshall', 'all-pairs', len(vertices),
                          len(conexoes), total_fw_distance, 0, metrics_fw)
 
     # Dijkstra para todos os pares
@@ -1106,10 +1055,10 @@ def exemplo_8_super_denso_all_pairs(collector):
         'iterations': iterations_total,
     }
 
-    collector.add_result('Exemplo_8_Super_Super_Denso', 'Dijkstra', 'all-pairs', len(vertices),
+    collector.add_result('Exemplo_7_Hyper_Denso', 'Dijkstra', 'all-pairs', len(vertices),
                          len(conexoes), total_distance, 0, metrics_dij_all_pairs)
 
-    salvar_grafo_como_imagem("Exemplo_8_Super_Super_Denso", vertices, conexoes, f"{base_path}/graphs")
+    salvar_grafo_como_imagem("Exemplo_7_Hyper_Denso", vertices, conexoes, f"{base_path}/graphs")
 
     print(f"Dijkstra (todos os pares): Tempo = {execution_time_total:.2f}ms, Memória = {memory_usage_total:.2f}KB")
     print(f"Floyd-Warshall: Tempo = {metrics_fw['execution_time']:.2f}ms, Memória = {metrics_fw['memory_usage']:.2f}KB")
@@ -1128,17 +1077,16 @@ def comparacao_completa():
     exemplo_3_complexo(collector)
     exemplo_4_denso(collector)
     exemplo_5_muito_complexo(collector)
-    # exemplo_6_denso_floyd(collector)
-    exemplo_7_super_denso(collector)
-    exemplo_8_super_denso(collector)
+    exemplo_6_super_denso(collector)
+    exemplo_7_hyper_denso(collector)
 
     exemplo_1_basico_all_pairs(collector)
     exemplo_2_medio_all_pairs(collector)
     exemplo_3_complexo_all_pairs(collector)
     exemplo_4_denso_all_pairs(collector)
     exemplo_5_super_denso_all_pairs(collector)
-    exemplo_7_super_denso_all_pairs(collector)
-    exemplo_8_super_denso_all_pairs(collector)
+    exemplo_6_super_denso_all_pairs(collector)
+    exemplo_7_hyper_denso_all_pairs(collector)
     
     # Salvar métricas em CSV
     collector.save_to_csv('algorithm_comparison.csv')
